@@ -2,11 +2,8 @@ name: dnsvalidator
 
 on:
   schedule:
-    # Run every 1h
+    # Run every 1 hour
     - cron: '0 * * * *'
-
-    # Run every 12h
-    # - cron:  '0 */12 * * *'
   push:
     branches:
       - main
