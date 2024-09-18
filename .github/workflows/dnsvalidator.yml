@@ -46,8 +46,7 @@ jobs:
 
       - name: Get the resolvers list and trim it
         run: |
-          # wget -O unstable_resolvers.txt https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt
-          wget -q -O - https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt | head -n1000 > unstable_resolvers.txt
+          wget -O unstable_resolvers.txt https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt
 
       - name: Generate new resolvers
         run: |
