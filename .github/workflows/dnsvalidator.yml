@@ -1,0 +1,67 @@
+name: dnsvalidator
+
+on:
+  schedule:
+    # Run every 1h
+    - cron: '0 * * * *'
+
+    # Run every 12h
+    # - cron:  '0 */12 * * *'
+  push:
+    branches:
+      - main
+
+# Actions project permission
+permissions:
+  contents: write
+
+jobs:
+  resfresh-list:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Checkout DNS Validator
+        uses: actions/checkout@v2
+        with:
+          repository: 'vortexau/dnsvalidator'
+          path: dnsvalidator
+    
+      - name: Install DNS Validator
+        run: |
+          cd dnsvalidator
+          python3 setup.py install
+      
+      - name: Install Package
+        run: |
+          pip3 install contextvars
+          sudo apt install parallel -y
+
+      - name: Get the resolvers list and trim it
+        run: |
+          wget -O unstable_resolvers.txt https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt
+
+      - name: Generate new resolvers
+        run: |
+          split -n l/8 unstable_resolvers.txt part_
+          ls part_* | parallel -j 8 'dnsvalidator -tL {} -threads 200 --silent > {}_resolvers.txt'
+          cat part_*_resolvers.txt > resolvers.txt
+
+          rm -rf part_* part_*_resolvers.txt unstable_resolvers.txt
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@users.noreply.github.com'
+
+          git add resolvers.txt
+          IST_DATE=$(TZ='Asia/Kolkata' date +'%a %H:%M:%S IST %d-%m-%Y')
+          git commit -m "Update: $IST_DATE"
+          git push
