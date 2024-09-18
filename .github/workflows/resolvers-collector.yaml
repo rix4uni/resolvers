@@ -113,13 +113,13 @@ jobs:
               # If the file was updated within the last 24 hours, download it
 
               if [ "$time_diff" -lt 60 ]; then  # 60 Seconds
-                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                curl -s "${raw_urls[i]}" | ./unew -t -el -q stable_resolvers.txt
                 echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff)) Seconds ago."
               elif [ "$time_diff" -lt 3600 ]; then  # 60 Minutes
-                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                curl -s "${raw_urls[i]}" | ./unew -t -el -q stable_resolvers.txt
                 echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff / 60)) Minutes ago."
               elif [ "$time_diff" -le 86400 ]; then   # 24 Hours
-                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                curl -s "${raw_urls[i]}" | ./unew -t -el -q stable_resolvers.txt
                 echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff / 3600)) Hours ago."
               elif [ "$time_diff" -le 2592000 ]; then   # 30 Days
                 echo "SKIPPING: ${raw_urls[i]} was updated $((time_diff / 86400)) Days ago."
