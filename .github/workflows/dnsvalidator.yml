@@ -46,7 +46,8 @@ jobs:
 
       - name: Get the resolvers list and trim it
         run: |
-          wget -O unstable_resolvers.txt https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt
+          # wget -O unstable_resolvers.txt https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt
+          wget -q -O - https://raw.githubusercontent.com/rix4uni/resolvers/main/unstable_resolvers.txt | head -n1000 > unstable_resolvers.txt
 
       - name: Generate new resolvers
         run: |
@@ -58,12 +59,20 @@ jobs:
 
       - name: Commit and push changes
         run: |
+          # Set GitHub Actions user
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@users.noreply.github.com'
+
+          # Stash changes
+          git stash
 
           # Pull the latest changes
           git pull --rebase origin main
 
+          # Apply stashed changes
+          git stash pop || echo "No stash to apply"
+
+          # Make your changes
           git add .
           IST_DATE=$(TZ='Asia/Kolkata' date +'%a %H:%M:%S IST %d-%m-%Y')
           git commit -m "Update: $IST_DATE"
