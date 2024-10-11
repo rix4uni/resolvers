@@ -1,2 +1,3 @@
-# resolvers
-Update: Fri 10:29:03 IST 11-10-2024
+## resolvers
+
+List of Fresh DNS resolvers updates every 1 hour
