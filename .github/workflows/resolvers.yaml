@@ -1,0 +1,219 @@
+name: resolvers
+
+on:
+  schedule:
+    # Run every 1 hour
+    - cron: '0 * * * *'
+  push:
+    branches:
+      - main
+
+# Actions project permission
+permissions:
+  contents: write
+
+jobs:
+  resfresh-list:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Removing old stable_resolvers.txt and unstable_resolvers.txt
+        run: |
+          rm -rf stable_resolvers.txt unstable_resolvers.txt
+
+      - name: Installing tar and unew via binary and dnsvalidator
+        run: |
+          sudo apt install tar
+          pip3 install contextvars
+          sudo apt install parallel -y
+
+          wget https://github.com/rix4uni/unew/releases/download/v0.0.4/unew-linux-amd64-0.0.4.tgz
+          tar -xvzf unew-linux-amd64-0.0.4.tgz
+          rm -rf unew-linux-amd64-0.0.4.tgz
+          mv unew /usr/local/bin/unew
+
+          git clone https://github.com/vortexau/dnsvalidator.git --depth 1
+          cd dnsvalidator
+          python3 setup.py install
+          cd ..
+          rm -rf dnsvalidator
+
+      - name: Get the resolvers list updated within the last 24 hours
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # List of GitHub API URLs for resolvers.txt file in different repositories
+          declare -a repos=(
+              "https://api.github.com/repos/trickest/resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/proabiral/Fresh-Resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/Findomain/fresh-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/PrivasecRED/fresh-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/janmasarik/resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/blechschmidt/massdns/commits?path=lists/resolvers.txt&per_page=1"
+              "https://api.github.com/repos/zeroc00I/test_github_action/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/and0x00/resolvers.txt/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/six2dez/resolvers_reconftw/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/carlospolop/Auto_Wordlists/commits?path=wordlists/trusted_resolvers.txt&per_page=1"
+              "https://api.github.com/repos/BBerastegui/fresh-dns-servers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/zy9ard3/resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/avisscr/dns-servers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/BonJarber/fresh-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/Baiqll/dns-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/the-valluvarsploit/Resolver/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/salahgapr/fresh-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/threatcode/fuzzlist/commits?path=wordlists/trusted_resolvers.txt&per_page=1"
+              "https://api.github.com/repos/bug4fix/fresh-resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/its0x08/bugbounty-actions/commits?path=outputs/resolvers.txt&per_page=1"
+              "https://api.github.com/repos/mild0wl/Resolvers/commits?path=output/freshresolvers.txt&per_page=1"
+              "https://api.github.com/repos/wanted1205/updaterecon/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/jaikishantulswani/Resolvers/commits?path=output/freshresolvers.txt&per_page=1"
+              "https://api.github.com/repos/Phasip/resolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/Sybil-Scan/getresolvers/commits?path=resolvers.txt&per_page=1"
+              "https://api.github.com/repos/wavvs/lazydns/commits?path=resolvers.txt&per_page=1"
+          )
+
+          # List of raw GitHub URLs for downloading resolvers.txt files
+          declare -a raw_urls=(
+              "https://raw.githubusercontent.com/trickest/resolvers/refs/heads/main/resolvers.txt"
+              "https://raw.githubusercontent.com/proabiral/Fresh-Resolvers/master/resolvers.txt"
+              "https://raw.githubusercontent.com/Findomain/fresh-resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/PrivasecRED/fresh-resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/janmasarik/resolvers/master/resolvers.txt"
+              "https://raw.githubusercontent.com/blechschmidt/massdns/master/lists/resolvers.txt"
+              "https://raw.githubusercontent.com/zeroc00I/test_github_action/main/resolvers.txt"
+              "https://raw.githubusercontent.com/and0x00/resolvers.txt/main/resolvers.txt"
+              "https://raw.githubusercontent.com/six2dez/resolvers_reconftw/main/resolvers.txt"
+              "https://raw.githubusercontent.com/carlospolop/Auto_Wordlists/main/wordlists/trusted_resolvers.txt"
+              "https://raw.githubusercontent.com/BBerastegui/fresh-dns-servers/master/resolvers.txt"
+              "https://raw.githubusercontent.com/zy9ard3/resolvers/master/resolvers.txt"
+              "https://raw.githubusercontent.com/avisscr/dns-servers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/BonJarber/fresh-resolvers/refs/heads/main/resolvers.txt"
+              "https://raw.githubusercontent.com/Baiqll/dns-resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/the-valluvarsploit/Resolver/main/resolvers.txt"
+              "https://raw.githubusercontent.com/salahgapr/fresh-resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/threatcode/fuzzlist/main/wordlists/trusted_resolvers.txt"
+              "https://raw.githubusercontent.com/bug4fix/fresh-resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/its0x08/bugbounty-actions/main/outputs/resolvers.txt"
+              "https://raw.githubusercontent.com/mild0wl/Resolvers/main/output/freshresolvers.txt"
+              "https://raw.githubusercontent.com/wanted1205/updaterecon/main/resolvers.txt"
+              "https://raw.githubusercontent.com/jaikishantulswani/Resolvers/main/output/freshresolvers.txt"
+              "https://raw.githubusercontent.com/Phasip/resolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/Sybil-Scan/getresolvers/main/resolvers.txt"
+              "https://raw.githubusercontent.com/wavvs/lazydns/master/resolvers.txt"
+          )
+
+          # Loop over each repository
+          for i in "${!repos[@]}"; do
+              commit_info=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "${repos[i]}" | jq -r '.[0].commit.committer.date')
+              
+              # Extract the commit date of the most recent commit
+              commit_date_sec=$(date -d "$commit_info" +%s)
+              
+              # Get the current date in seconds since epoch
+              current_date_sec=$(date +%s)
+              
+              # Calculate time difference (24 hours = 86400 seconds)
+              time_diff=$((current_date_sec - commit_date_sec))
+              
+              # If the file was updated within the last 24 hours, download it
+
+              if [ "$time_diff" -lt 60 ]; then  # 60 Seconds
+                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff)) Seconds ago."
+              elif [ "$time_diff" -lt 3600 ]; then  # 60 Minutes
+                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff / 60)) Minutes ago."
+              elif [ "$time_diff" -le 86400 ]; then   # 24 Hours
+                curl -s "${raw_urls[i]}" | unew -t -el -q stable_resolvers.txt
+                echo "DOWNLOADING: ${raw_urls[i]} was updated $((time_diff / 3600)) Hours ago."
+              elif [ "$time_diff" -le 2592000 ]; then   # 30 Days
+                echo "SKIPPING: ${raw_urls[i]} was updated $((time_diff / 86400)) Days ago."
+              elif [ "$time_diff" -le 31536000 ]; then   # 12 Months (1 Year)
+                echo "SKIPPING: ${raw_urls[i]} was updated $((time_diff / 2592000)) Months ago."
+              else
+                echo "SKIPPING: ${raw_urls[i]} was updated $((time_diff / 31536000)) Years ago."
+              fi
+          done
+
+      - name: Get all resolvers list
+        run: |
+          curl -s "https://public-dns.info/nameservers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/trickest/resolvers/refs/heads/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/proabiral/Fresh-Resolvers/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Findomain/fresh-resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/PrivasecRED/fresh-resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/janmasarik/resolvers/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/blechschmidt/massdns/master/lists/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/zeroc00I/test_github_action/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/and0x00/resolvers.txt/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/six2dez/resolvers_reconftw/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/carlospolop/Auto_Wordlists/main/wordlists/trusted_resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/BBerastegui/fresh-dns-servers/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/zy9ard3/resolvers/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/avisscr/dns-servers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/BonJarber/fresh-resolvers/refs/heads/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Baiqll/dns-resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/the-valluvarsploit/Resolver/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/salahgapr/fresh-resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/threatcode/fuzzlist/main/wordlists/trusted_resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/bug4fix/fresh-resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/its0x08/bugbounty-actions/main/outputs/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/mild0wl/Resolvers/main/output/freshresolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/wanted1205/updaterecon/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/jaikishantulswani/Resolvers/main/output/freshresolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Phasip/resolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Sybil-Scan/getresolvers/main/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/wavvs/lazydns/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/akam.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/alibabadns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/cloudns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnsimple.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnsmadeeasy.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnsowl.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnspod.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnssub.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dnsv3.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dodns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dynect.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/dynu.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/easydns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/googledomains.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/hosttech.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/msft.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/nsone.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/public.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/topdns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/ultradns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Abss0x7tbh/bass/refs/heads/master/resolvers/verisigndns.txt" | unew -t -el -q unstable_resolvers.txt
+          curl -s "https://raw.githubusercontent.com/Rhynorater/resolvers/refs/heads/master/resolvers.txt" | unew -t -el -q unstable_resolvers.txt
+
+      - name: Generate new resolvers
+        run: |
+          split -n l/8 unstable_resolvers.txt part_
+          ls part_* | parallel -j 8 'dnsvalidator -tL {} -threads 200 --silent > {}_resolvers.txt'
+          cat part_*_resolvers.txt > resolvers.txt
+
+          rm -rf part_* part_*_resolvers.txt
+
+      - name: Commit and push changes if there are any
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@users.noreply.github.com'
+          git add .
+          
+          # Check if there are changes before committing
+          if ! git diff --cached --exit-code; then
+            IST_DATE=$(TZ='Asia/Kolkata' date +'%a %b %d %H:%M:%S IST %Y')
+            git commit -m "Updated List: $IST_DATE"
+            git push
+          else
+            echo "No changes to commit"
+          fi
